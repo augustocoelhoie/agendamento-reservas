@@ -18,6 +18,11 @@ Feito com **Google Apps Script**, **Google Sheets** (como banco de dados) e uma 
 - **Calendário geral** de vários anos, com painel lateral por dia que **não expõe nome nem telefone** de quem reservou.
 - **Acessibilidade:** fonte grande, alto contraste, navegação por teclado e foco visível, pensado para públicos de todas as idades.
 
+<img width="543" height="797" alt="image" src="https://github.com/user-attachments/assets/207e7193-7a19-4f05-8616-b32c8af8482d" />
+<img width="517" height="858" alt="image" src="https://github.com/user-attachments/assets/a7eaec5e-3908-46cb-ba6c-04234cb9a5b0" />
+<img width="645" height="546" alt="image" src="https://github.com/user-attachments/assets/12b10981-84ac-456b-b6f7-fccc8709910d" />
+
+
 ## Segurança em resumo
 
 - A planilha continua **privada**: o script roda com a conta do administrador e o usuário nunca a abre.
