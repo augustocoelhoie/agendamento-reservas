@@ -1,0 +1,21 @@
+# Configuração local (URL real do seu App da Web)
+site/config.js
+
+# Planilhas reais e exportações (podem conter nomes, WhatsApp e PINs)
+*.xlsx
+!sheet-template/reservas-espacos-modelo.xlsx
+*.csv
+!sheet-template/*.csv
+
+# Chaves e variáveis de ambiente
+.env
+.env.*
+.clasprc.json
+.clasp.json
+
+# Sistema / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+node_modules/

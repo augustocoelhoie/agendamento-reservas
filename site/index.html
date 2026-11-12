@@ -1,0 +1,1842 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Reservas de Espaços</title>
+  <!-- Reservas de Espaços -->
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            marinho: { 50: '#eef3fb', 100: '#d6e2f5', 600: '#1f4e96', 700: '#173d78', 800: '#0f2d5c', 900: '#0a1f42' },
+            ouro: { 400: '#f2c14e', 500: '#e0a91f' }
+          }
+        }
+      }
+    };
+  </script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/pt.js"></script>
+
+  <style>
+    html { font-size: 112.5%; } /* 18px base: leitura confortável */
+    body { -webkit-font-smoothing: antialiased; }
+    .campo {
+      width: 100%; border: 2px solid #64748b; border-radius: .75rem;
+      padding: .85rem 1rem; font-size: 1.1rem; background: #fff; color: #0f172a;
+    }
+    .campo:focus { outline: 4px solid #f2c14e; outline-offset: 1px; border-color: #0f2d5c; }
+    .campo:disabled { background: #e2e8f0; color: #64748b; cursor: not-allowed; }
+    .campo.invalido { border-color: #b91c1c; background: #fef2f2; }
+    .rotulo { display: block; font-weight: 700; font-size: 1.1rem; margin-bottom: .4rem; color: #0f172a; }
+    .ajuda { font-size: .95rem; color: #334155; margin-top: .35rem; }
+    .erro-campo { font-size: .95rem; color: #b91c1c; font-weight: 700; margin-top: .35rem; }
+    button:focus-visible, a:focus-visible, [tabindex]:focus-visible { outline: 4px solid #f2c14e; outline-offset: 2px; }
+
+    /* Flatpickr maior e com alto contraste */
+    .flatpickr-calendar { font-size: 1.05rem; width: 340px; }
+    .flatpickr-day { height: 44px; line-height: 44px; max-width: 44px; font-weight: 600; }
+    .flatpickr-day.flatpickr-disabled, .flatpickr-day.flatpickr-disabled:hover {
+      color: #94a3b8; text-decoration: line-through; background: #f1f5f9;
+    }
+    .flatpickr-day.selected { background: #0f2d5c; border-color: #0f2d5c; }
+
+    /* Campo com busca (espaço / pastoral) */
+    .combo { padding-right: 2.75rem; background-repeat: no-repeat; background-position: right 1rem center; background-size: 1.1rem;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%230f2d5c'%3E%3Cpath d='M5.3 7.3a1 1 0 0 1 1.4 0L10 10.6l3.3-3.3a1 1 0 1 1 1.4 1.4l-4 4a1 1 0 0 1-1.4 0l-4-4a1 1 0 0 1 0-1.4z'/%3E%3C/svg%3E"); }
+    .lista-combo { position: absolute; z-index: 60; left: 0; right: 0; top: 100%; margin-top: 4px; max-height: 18rem;
+      overflow-y: auto; background: #fff; border: 2px solid #0f2d5c; border-radius: .75rem; box-shadow: 0 10px 25px rgba(0,0,0,.2); }
+    .opcao { padding: .8rem 1rem; font-size: 1.1rem; cursor: pointer; border-bottom: 1px solid #e2e8f0; }
+    .opcao:last-child { border-bottom: 0; }
+    .opcao:hover, .opcao.ativa { background: #0f2d5c; color: #fff; }
+    .opcao[aria-selected="true"] { font-weight: 800; }
+    .opcao.fixa { font-style: italic; background: #fffbeb; }
+    .opcao.fixa:hover, .opcao.fixa.ativa { background: #0f2d5c; }
+    .sem-opcao { padding: .8rem 1rem; color: #475569; font-size: 1.05rem; }
+
+    /* Mesas e cadeiras (espaço Externo) */
+    .sn { display: flex; align-items: center; justify-content: center; gap: .6rem; border: 2px solid #64748b;
+      border-radius: .75rem; padding: .9rem 1rem; font-size: 1.2rem; font-weight: 800; background: #fff; cursor: pointer; }
+    .sn input { width: 1.4rem; height: 1.4rem; }
+    .sn:has(input:checked) { border-color: #0f2d5c; background: #0f2d5c; color: #fff; }
+    .sn:has(input:focus-visible) { outline: 4px solid #f2c14e; outline-offset: 2px; }
+    .item-obj { border: 2px solid #cbd5e1; border-radius: .75rem; padding: .8rem 1rem; background: #fff; }
+    .item-obj:has(input:checked) { border-color: #0f2d5c; }
+    .item-obj.desativado { opacity: .6; }
+
+    /* Calendário */
+    .dia { min-height: 110px; }
+    @media (max-width: 640px) { .dia { min-height: 74px; } }
+    .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .line-clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+
+    /* Lista de reservas do usuário (cancelar / alterar) */
+    .item-reserva { display: block; border: 2px solid #cbd5e1; border-radius: .75rem; padding: .9rem 1rem; cursor: pointer; background: #fff; }
+    .item-reserva:hover { border-color: #1f4e96; }
+    .item-reserva.escolhida { border-color: #0f2d5c; background: #eef3fb; box-shadow: 0 0 0 3px #f2c14e inset; }
+
+    .spinner { width: 1.4rem; height: 1.4rem; border: 3px solid currentColor; border-right-color: transparent;
+      border-radius: 50%; animation: gira .8s linear infinite; display: inline-block; vertical-align: middle; }
+    @keyframes gira { to { transform: rotate(360deg); } }
+  </style>
+  <script src="config.js"></script>
+</head>
+
+<body class="bg-slate-100 text-slate-900 min-h-screen">
+
+  <!-- ===================== TELA DE LOGIN ===================== -->
+  <section id="tela-login" class="hidden min-h-screen items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 sm:p-8">
+      <div class="flex flex-col items-center text-center">
+        <div class="w-24 h-24 rounded-full bg-white ring-4 ring-ouro-400 flex items-center justify-center overflow-hidden">
+          <span id="logo-login" class="text-marinho-800 text-xs font-bold leading-tight px-1">SUA<br>LOGO</span>
+        </div>
+        <p class="mt-3 font-semibold text-marinho-800 text-lg" id="nome-paroquia-login"></p>
+        <h1 class="text-2xl font-extrabold text-marinho-800">Reserva de Espaços</h1>
+        <p class="mt-2 text-slate-700">Entre com o seu e-mail e o PIN que o patrimônio enviou.</p>
+      </div>
+
+      <form id="form-login" class="mt-6 space-y-5" novalidate>
+        <div>
+          <label for="login-email" class="rotulo">E-mail cadastrado</label>
+          <input id="login-email" type="email" inputmode="email" autocomplete="username"
+            class="campo" placeholder="seuemail@gmail.com" required>
+        </div>
+        <div>
+          <label for="login-pin" class="rotulo">PIN de acesso</label>
+          <input id="login-pin" type="password" inputmode="numeric" maxlength="6" autocomplete="current-password"
+            class="campo tracking-widest text-center text-2xl" placeholder="000000" required>
+          <label class="ajuda flex items-center gap-2 mt-2">
+            <input id="ver-pin" type="checkbox" class="w-5 h-5"> Mostrar o PIN
+          </label>
+        </div>
+        <label class="flex items-start gap-2 text-base">
+          <input id="lembrar" type="checkbox" class="w-6 h-6 mt-0.5" checked>
+          <span>Continuar conectado neste aparelho (não precisa digitar o PIN nas próximas vezes)</span>
+        </label>
+        <div id="msg-login" class="hidden rounded-xl p-4 text-lg font-semibold" role="alert"></div>
+        <button id="btn-entrar" type="submit"
+          class="w-full rounded-2xl bg-marinho-800 hover:bg-marinho-700 disabled:bg-slate-400 text-white text-xl font-extrabold py-5 shadow-lg">
+          Entrar
+        </button>
+        <p class="ajuda text-center">Esqueceu o PIN? Fale com o responsável pelo cadastro.</p>
+      </form>
+    </div>
+  </section>
+
+  <!-- ===================== APLICAÇÃO ===================== -->
+  <div id="app" class="hidden">
+  <!-- ===================== CABEÇALHO ===================== -->
+  <header class="bg-marinho-800 text-white shadow-lg">
+    <div class="max-w-6xl mx-auto px-4 py-4 flex items-center gap-4">
+      <div class="shrink-0 w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-white flex items-center justify-center overflow-hidden ring-4 ring-ouro-400">
+        <span id="logo-topo" class="text-marinho-800 text-xs font-bold text-center leading-tight px-1">SUA<br>LOGO</span>
+      </div>
+      <div>
+        <p class="text-ouro-400 font-semibold text-base sm:text-lg" id="nome-paroquia-topo"></p>
+        <h1 class="text-2xl sm:text-3xl font-extrabold leading-tight">Reserva de Espaços</h1>
+        <p class="text-sm sm:text-base text-marinho-100 mt-1 break-words">
+          <span id="usuario-nome">👤</span>
+          <button id="btn-sair" class="ml-2 underline font-semibold">Sair</button>
+        </p>
+      </div>
+    </div>
+
+    <!-- Abas -->
+    <nav class="max-w-6xl mx-auto px-4" role="tablist" aria-label="Navegação principal">
+      <div class="grid grid-cols-2 gap-2">
+        <button id="aba-form" role="tab" aria-selected="true" aria-controls="visao-form"
+          class="aba rounded-t-xl py-4 text-lg sm:text-xl font-bold">📝 Fazer Reserva</button>
+        <button id="aba-cal" role="tab" aria-selected="false" aria-controls="visao-cal"
+          class="aba rounded-t-xl py-4 text-lg sm:text-xl font-bold">📅 Calendário Geral</button>
+      </div>
+    </nav>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-4 py-6">
+
+    <!-- ===================== VISÃO 1: FORMULÁRIO ===================== -->
+    <section id="visao-form" role="tabpanel" aria-labelledby="aba-form">
+      <div class="bg-white rounded-2xl shadow p-5 sm:p-8 max-w-3xl mx-auto">
+        <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+          <div>
+            <h2 class="text-2xl font-extrabold text-marinho-800">Nova reserva</h2>
+            <p class="mt-1 text-slate-700">Escolha a data primeiro. Só aparecem os espaços que ainda estão livres.</p>
+          </div>
+          <button id="btn-abrir-gerir" type="button"
+            class="shrink-0 rounded-2xl border-2 border-marinho-800 text-marinho-800 bg-white hover:bg-marinho-50 px-5 py-3 text-lg font-extrabold shadow-sm">
+            🔄 Alterar ou cancelar reserva
+          </button>
+        </div>
+
+        <div id="aviso-regras" class="mt-4 rounded-xl bg-marinho-50 border-2 border-marinho-100 p-4 text-base">
+          <p class="font-bold text-marinho-800">Regras importantes</p>
+          <ul class="list-disc pl-5 mt-1 space-y-1 text-slate-800">
+            <li>Não é possível reservar para o dia de hoje.</li>
+            <li>Nos sábados, não é possível reservar para o Domingo seguinte, só para a segunda-feira em diante.</li>
+            <li>Datas bloqueadas pela paróquia aparecem em vermelho.</li>
+            <li>Em algumas datas, apenas um turno pode estar bloqueado (ex.: a noite). Ele aparece como BLOQUEADO na lista de turnos.</li>
+            <li>Alterações e cancelamentos só podem ser feitos <b>até o dia anterior</b> à data da reserva, e ficam registrados para a administração.</li>
+            <li>Para trocar de <b>dia</b>, cancele a reserva e faça uma nova. Espaço, turno e motivo podem ser alterados.</li>
+            <li>No espaço <b>Externo</b>, você também pode reservar mesas e cadeiras.</li>
+          </ul>
+        </div>
+
+        <div id="carregando-inicial" class="mt-6 text-lg text-marinho-800 font-semibold">
+          <span class="spinner"></span> Carregando informações...
+        </div>
+
+        <form id="form-reserva" class="mt-6 space-y-6 hidden" novalidate>
+          <!-- Data -->
+          <div>
+            <label for="data" class="rotulo">1. Data da reserva</label>
+            <input id="data" name="data" type="text" class="campo" placeholder="Toque para escolher a data" readonly required>
+            <p id="info-data" class="ajuda" aria-live="polite"></p>
+          </div>
+
+          <div class="grid sm:grid-cols-2 gap-6">
+            <!-- Turno -->
+            <div>
+              <label for="turno" class="rotulo">2. Turno</label>
+              <select id="turno" name="turno" class="campo" required disabled>
+                <option value="">Escolha a data primeiro</option>
+              </select>
+            </div>
+            <!-- Espaço -->
+            <div>
+              <label for="espaco" class="rotulo">3. Espaço</label>
+              <div class="relative">
+                <input id="espaco" type="text" class="campo combo" role="combobox" aria-autocomplete="list"
+                  aria-expanded="false" aria-controls="espaco-lista" autocomplete="off" disabled
+                  placeholder="Escolha o turno primeiro">
+                <ul id="espaco-lista" role="listbox" class="lista-combo hidden"></ul>
+              </div>
+            </div>
+          </div>
+
+          <!-- Mesas e cadeiras: aparece só quando o espaço é "Externo" -->
+          <div id="objetos-novo" class="hidden"></div>
+
+          <div>
+            <label for="pastoral" class="rotulo">4. Pastoral / Movimento</label>
+            <div class="relative">
+              <input id="pastoral" type="text" class="campo combo" role="combobox" aria-autocomplete="list"
+                aria-expanded="false" aria-controls="pastoral-lista" autocomplete="off"
+                placeholder="Digite ou escolha a pastoral">
+              <ul id="pastoral-lista" role="listbox" class="lista-combo hidden"></ul>
+            </div>
+            <div id="pastoral-outro-wrap" class="hidden mt-3">
+              <label for="pastoral-outro" class="rotulo">Nome da pastoral / movimento</label>
+              <input id="pastoral-outro" type="text" class="campo" maxlength="100" placeholder="Digite o nome">
+            </div>
+          </div>
+
+          <div>
+            <div class="grid sm:grid-cols-2 gap-6">
+              <div>
+                <label for="nome" class="rotulo">5. Seu nome</label>
+                <input id="nome" name="nome" type="text" class="campo" maxlength="100" autocomplete="name"
+                  placeholder="Nome completo" required>
+              </div>
+              <div>
+                <label for="whatsapp" class="rotulo">6. WhatsApp</label>
+                <input id="whatsapp" name="whatsapp" type="tel" inputmode="numeric" class="campo" maxlength="15"
+                  autocomplete="tel-national" placeholder="(00) 00000-0000" required>
+              </div>
+            </div>
+            <p id="info-cadastro" class="ajuda hidden">
+              ℹ️ Pastoral, nome e WhatsApp vieram do seu cadastro. Se precisar, é só alterar.
+            </p>
+          </div>
+
+          <div>
+            <label for="motivo" class="rotulo">7. Motivo da reserva</label>
+            <textarea id="motivo" name="motivo" rows="2" class="campo" placeholder="Ex.: Reunião mensal da coordenação"
+              required></textarea>
+            <div class="flex justify-between items-start gap-2">
+              <p class="ajuda">Entre <b id="mot-min">7</b> e <b id="mot-max">50</b> caracteres.</p>
+              <p id="contador-motivo" class="ajuda font-bold" aria-live="polite">0/50</p>
+            </div>
+          </div>
+
+          <div id="msg-form" class="hidden rounded-xl p-4 text-lg font-semibold" role="alert"></div>
+
+          <button id="btn-enviar" type="submit"
+            class="w-full rounded-2xl bg-green-700 hover:bg-green-800 disabled:bg-slate-400 disabled:cursor-not-allowed text-white text-xl sm:text-2xl font-extrabold py-5 shadow-lg transition">
+            ✅ Confirmar Reserva
+          </button>
+        </form>
+      </div>
+    </section>
+
+    <!-- ===================== VISÃO 2: CALENDÁRIO ===================== -->
+    <section id="visao-cal" role="tabpanel" aria-labelledby="aba-cal" class="hidden">
+      <div class="bg-white rounded-2xl shadow p-4 sm:p-6">
+        <div class="flex flex-col sm:flex-row sm:items-end gap-4 justify-between">
+          <div>
+            <label for="seletor-mes" class="rotulo">Ir para o mês</label>
+            <input id="seletor-mes" type="month" class="campo sm:w-64">
+            <p id="info-periodo" class="ajuda"></p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button id="btn-ant" class="rounded-xl bg-marinho-800 text-white px-4 py-3 text-lg font-bold disabled:bg-slate-300"
+              aria-label="Mês anterior">◀</button>
+            <h2 id="titulo-mes" class="text-xl sm:text-2xl font-extrabold text-marinho-800 min-w-[11rem] text-center capitalize"></h2>
+            <button id="btn-prox" class="rounded-xl bg-marinho-800 text-white px-4 py-3 text-lg font-bold disabled:bg-slate-300"
+              aria-label="Próximo mês">▶</button>
+            <button id="btn-hoje" class="rounded-xl border-2 border-marinho-800 text-marinho-800 px-4 py-2.5 text-lg font-bold">Hoje</button>
+          </div>
+        </div>
+
+        <div class="mt-4 flex flex-wrap gap-4 text-sm sm:text-base">
+          <span class="flex items-center gap-2"><span class="w-5 h-5 rounded bg-marinho-600"></span> Com reservas</span>
+          <span class="flex items-center gap-2"><span class="w-5 h-5 rounded bg-red-700"></span> Bloqueado</span>
+          <span class="flex items-center gap-2"><span class="w-5 h-5 rounded bg-amber-400"></span> Turno bloqueado</span>
+          <span class="flex items-center gap-2"><span class="w-5 h-5 rounded bg-slate-300"></span> Dia já passado</span>
+          <span class="flex items-center gap-2"><span class="w-5 h-5 rounded ring-4 ring-ouro-400 bg-white"></span> Hoje</span>
+        </div>
+
+        <div class="mt-4 grid grid-cols-7 gap-1 text-center font-bold text-marinho-800 text-sm sm:text-base">
+          <div>Dom</div><div>Seg</div><div>Ter</div><div>Qua</div><div>Qui</div><div>Sex</div><div>Sáb</div>
+        </div>
+        <div id="grade" class="mt-1 grid grid-cols-7 gap-1" aria-live="polite"></div>
+        <p id="cal-status" class="mt-3 text-marinho-800 font-semibold"></p>
+      </div>
+    </section>
+  </main>
+
+  </div><!-- fim #app -->
+
+  <!-- ===================== PAINEL LATERAL ===================== -->
+  <div id="overlay" class="fixed inset-0 bg-black/50 opacity-0 pointer-events-none transition-opacity duration-300 z-40"></div>
+  <aside id="painel" role="dialog" aria-modal="true" aria-labelledby="painel-titulo"
+    class="fixed top-0 right-0 h-full w-full sm:w-[28rem] bg-white shadow-2xl z-50 translate-x-full transition-transform duration-300 flex flex-col">
+    <div class="bg-marinho-800 text-white p-5 flex items-start justify-between gap-3">
+      <div>
+        <p class="text-ouro-400 font-semibold">Detalhes do dia</p>
+        <h3 id="painel-titulo" class="text-2xl font-extrabold capitalize"></h3>
+      </div>
+      <button id="btn-fechar" class="rounded-xl bg-white text-marinho-800 px-4 py-2 text-lg font-extrabold"
+        aria-label="Fechar painel">✕ Fechar</button>
+    </div>
+    <div id="painel-conteudo" class="p-5 overflow-y-auto flex-1"></div>
+  </aside>
+
+  <!-- ===================== MODAL DE SUCESSO ===================== -->
+  <div id="modal-ok" class="fixed inset-0 z-[70] hidden items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 text-center shadow-2xl">
+      <div class="text-6xl">🙏</div>
+      <h3 id="modal-ok-titulo" class="text-2xl font-extrabold text-green-800 mt-2">Reserva confirmada!</h3>
+      <div id="modal-resumo" class="mt-4 text-left text-lg bg-green-50 border-2 border-green-200 rounded-xl p-4 space-y-1"></div>
+      <button id="btn-modal-ok" class="mt-6 w-full rounded-2xl bg-marinho-800 text-white text-xl font-bold py-4">OK, entendi</button>
+    </div>
+  </div>
+
+  <!-- ===================== MODAL: ALTERAR / CANCELAR RESERVA ===================== -->
+  <div id="modal-gerir" class="fixed inset-0 z-50 hidden items-start sm:items-center justify-center bg-black/60 p-3 sm:p-4 overflow-y-auto"
+    role="dialog" aria-modal="true" aria-labelledby="gerir-titulo">
+    <div class="bg-white rounded-2xl max-w-xl w-full my-4 p-5 sm:p-7 shadow-2xl">
+      <div class="flex items-start justify-between gap-3">
+        <div>
+          <h3 id="gerir-titulo" class="text-2xl font-extrabold text-marinho-800">Alterar ou cancelar reserva</h3>
+          <p class="mt-1 text-slate-700">Informe a data. Aparecem somente as reservas feitas com o <b>seu e-mail</b>.</p>
+          <p class="mt-1 text-slate-700">Só é possível alterar ou cancelar <b>até o dia anterior</b> à reserva.</p>
+        </div>
+        <button id="btn-gerir-fechar" class="shrink-0 rounded-xl bg-slate-200 hover:bg-slate-300 px-4 py-2 text-lg font-extrabold"
+          aria-label="Fechar">✕</button>
+      </div>
+
+      <div class="mt-5">
+        <label for="gerir-data" class="rotulo">Data da reserva</label>
+        <input id="gerir-data" type="text" class="campo" placeholder="Toque para escolher a data" readonly>
+      </div>
+      <button id="btn-gerir-buscar" type="button"
+        class="mt-4 w-full rounded-2xl bg-marinho-800 hover:bg-marinho-700 disabled:bg-slate-400 text-white text-xl font-extrabold py-4 shadow">
+        🔎 Buscar minhas reservas
+      </button>
+
+      <div id="gerir-msg" class="hidden mt-4 rounded-xl p-4 text-lg font-semibold" role="alert"></div>
+
+      <div id="gerir-lista-wrap" class="hidden mt-5">
+        <p class="rotulo">Escolha a reserva</p>
+        <div id="gerir-lista" class="space-y-3" role="radiogroup" aria-label="Minhas reservas nesta data"></div>
+      </div>
+
+      <div id="gerir-acoes" class="hidden mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <button id="btn-gerir-alterar" type="button"
+          class="rounded-2xl bg-marinho-800 hover:bg-marinho-700 disabled:bg-slate-400 text-white text-xl font-extrabold py-4 shadow">
+          ✏️ Alterar
+        </button>
+        <button id="btn-gerir-cancelar" type="button"
+          class="rounded-2xl bg-red-700 hover:bg-red-800 disabled:bg-slate-400 text-white text-xl font-extrabold py-4 shadow">
+          🗑️ Cancelar
+        </button>
+      </div>
+
+      <!-- Confirmação do cancelamento -->
+      <div id="gerir-conf-cancelar" class="hidden mt-5 rounded-xl bg-red-50 border-2 border-red-700 p-4">
+        <p class="text-red-800 font-extrabold text-xl">Cancelar esta reserva?</p>
+        <p id="gerir-conf-texto" class="mt-2 text-lg text-slate-800"></p>
+        <p class="mt-2 text-base text-slate-700">A reserva será apagada e o espaço ficará livre para outras pastorais.
+          O cancelamento fica registrado para a administração.</p>
+        <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <button id="btn-conf-cancelar-sim" type="button"
+            class="rounded-2xl bg-red-700 hover:bg-red-800 text-white text-lg font-extrabold py-4">Sim, cancelar</button>
+          <button id="btn-conf-cancelar-nao" type="button"
+            class="rounded-2xl border-2 border-slate-500 text-slate-800 text-lg font-extrabold py-4">Não, voltar</button>
+        </div>
+      </div>
+
+      <!-- Formulário de alteração -->
+      <form id="gerir-form-alterar" class="hidden mt-5 border-t-2 border-slate-200 pt-5 space-y-5" novalidate>
+        <p class="text-xl font-extrabold text-marinho-800">Alterar a reserva</p>
+        <p class="text-base text-slate-700 -mt-3">
+          A <b>data não muda</b>. Para trocar de dia, cancele esta reserva e faça uma nova.
+        </p>
+
+        <div>
+          <label for="gerir-turno" class="rotulo">Turno</label>
+          <select id="gerir-turno" class="campo"></select>
+        </div>
+
+        <div>
+          <label for="gerir-espaco" class="rotulo">Espaço</label>
+          <div class="relative">
+            <input id="gerir-espaco" type="text" class="campo combo" role="combobox" aria-autocomplete="list"
+              aria-expanded="false" aria-controls="gerir-espaco-lista" autocomplete="off"
+              placeholder="Digite ou escolha o espaço">
+            <ul id="gerir-espaco-lista" role="listbox" class="lista-combo hidden"></ul>
+          </div>
+        </div>
+
+        <!-- Mesas e cadeiras: aparece só quando o espaço é "Externo" -->
+        <div id="objetos-gerir" class="hidden"></div>
+
+        <div>
+          <label for="gerir-motivo" class="rotulo">Motivo da reserva</label>
+          <textarea id="gerir-motivo" rows="2" class="campo"></textarea>
+          <div class="flex justify-between items-start gap-2">
+            <p class="ajuda">Entre <b id="gerir-mot-min">7</b> e <b id="gerir-mot-max">50</b> caracteres.</p>
+            <p id="gerir-contador" class="ajuda font-bold" aria-live="polite">0/50</p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <button id="btn-gerir-salvar" type="submit"
+            class="rounded-2xl bg-green-700 hover:bg-green-800 disabled:bg-slate-400 text-white text-xl font-extrabold py-4 shadow">
+            ✅ Salvar alteração
+          </button>
+          <button id="btn-gerir-voltar" type="button"
+            class="rounded-2xl border-2 border-slate-500 text-slate-800 text-lg font-extrabold py-4">Voltar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+<script>
+/* =========================================================================
+   Utilitários
+   ========================================================================= */
+const $ = (id) => document.getElementById(id);
+const MESES = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+const DIAS = ['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'];
+
+/* =========================================================================
+   CONFIGURAÇÃO — vem do arquivo config.js (copie de config.example.js)
+   Define: API_URL e NOME_INSTITUICAO
+   ========================================================================= */
+
+/* =========================================================================
+   Comunicação com o Apps Script
+   Caminho principal: POST direto. Reserva automática: JSONP (usado se o
+   navegador ou a rede bloquearem o primeiro).
+   ========================================================================= */
+function enviarPost(acao, args) {
+  return fetch(API_URL, {
+    method: 'POST',
+    body: JSON.stringify({ acao, args }),
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // evita verificação prévia (preflight)
+    redirect: 'follow'
+  }).then(r => r.json());
+}
+
+let seqJsonp = 0;
+function enviarJsonp(acao, args) {
+  return new Promise((resolve, reject) => {
+    const nome = '__reservas_cb_' + (++seqJsonp) + '_' + Date.now();
+    const script = document.createElement('script');
+    const limpar = () => { delete window[nome]; script.remove(); clearTimeout(tempo); };
+    const tempo = setTimeout(() => { limpar(); reject(new Error('Sem resposta do servidor.')); }, 25000);
+    window[nome] = (resp) => { limpar(); resolve(resp); };
+    script.onerror = () => { limpar(); reject(new Error('Falha ao contatar o servidor.')); };
+    script.src = API_URL + '?acao=' + encodeURIComponent(acao) +
+      '&args=' + encodeURIComponent(JSON.stringify(args)) + '&callback=' + nome;
+    document.head.appendChild(script);
+  });
+}
+
+async function rpc(fn, ...args) {
+  let resp;
+  try {
+    resp = await enviarPost(fn, args);
+  } catch (e) {
+    console.warn('Caminho principal indisponível, usando o reserva:', e.message);
+    resp = await enviarJsonp(fn, args);
+  }
+  if (!resp || !resp.ok) throw new Error((resp && resp.erro) || 'Falha na comunicação com o servidor.');
+  return resp.dados;
+}
+
+/* Chamadas que exigem estar conectado: enviam o token e tratam sessão expirada */
+async function rpcAuth(fn, ...args) {
+  try {
+    return await rpc(fn, estado.token, ...args);
+  } catch (e) {
+    if (String(e.message || e).indexOf('SESSAO') !== -1) {
+      guardarToken('');
+      mostrarLogin(String(e.message).replace(/^SESSAO:\s*/, ''));
+    }
+    throw e;
+  }
+}
+
+/* Guarda o token no aparelho (funciona mesmo se o navegador bloquear o armazenamento) */
+const CHAVE_TOKEN = 'reservas_token';
+function guardarToken(token, lembrar = true) {
+  estado.token = token;
+  try {
+    if (token) (lembrar ? localStorage : sessionStorage).setItem(CHAVE_TOKEN, token);
+    else { localStorage.removeItem(CHAVE_TOKEN); sessionStorage.removeItem(CHAVE_TOKEN); }
+  } catch (e) { /* navegador sem armazenamento: vale só nesta visita */ }
+}
+function lerToken() {
+  try { return localStorage.getItem(CHAVE_TOKEN) || sessionStorage.getItem(CHAVE_TOKEN) || ''; }
+  catch (e) { return ''; }
+}
+
+/* Dados de quem está conectado (para o cabeçalho aparecer na hora ao reabrir) */
+const CHAVE_USUARIO = 'reservas_usuario';
+function guardarUsuario(u) {
+  estado.usuario = u || null;
+  try {
+    if (u) localStorage.setItem(CHAVE_USUARIO, JSON.stringify(u));
+    else localStorage.removeItem(CHAVE_USUARIO);
+    localStorage.removeItem('reservas_nome'); // chave antiga da V4
+  } catch (e) {}
+}
+function lerUsuario() {
+  try { return JSON.parse(localStorage.getItem(CHAVE_USUARIO) || 'null'); }
+  catch (e) { return null; }
+}
+
+function esc(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+const pad = (n) => String(n).padStart(2, '0');
+const iso = (a, m, d) => `${a}-${pad(m)}-${pad(d)}`;
+function partes(isoStr) { const [a, m, d] = isoStr.split('-').map(Number); return { a, m, d }; }
+function dataLonga(isoStr) {
+  const { a, m, d } = partes(isoStr);
+  const dow = new Date(Date.UTC(a, m - 1, d)).getUTCDay();
+  return `${DIAS[dow]}, ${d} de ${MESES[m - 1]} de ${a}`;
+}
+function dataCurta(isoStr) { const { a, m, d } = partes(isoStr); return `${pad(d)}/${pad(m)}/${a}`; }
+function plural(n, s, p) { return `${n} ${n === 1 ? s : p}`; }
+
+/** "10 mesas e 50 cadeiras" (texto vazio se não houver nada) */
+function resumoObjetos(x) {
+  const itens = [];
+  if (x && x.mesas > 0) itens.push(plural(x.mesas, 'mesa', 'mesas'));
+  if (x && x.cadeiras > 0) itens.push(plural(x.cadeiras, 'cadeira', 'cadeiras'));
+  return itens.join(' e ');
+}
+
+/** Máscara de WhatsApp: (00) 00000-0000 ou (00) 0000-0000 */
+function formatarWhats(valor) {
+  const d = String(valor || '').replace(/\D/g, '').slice(0, 11);
+  let r = d;
+  if (d.length > 0) r = '(' + d.slice(0, 2);
+  if (d.length >= 3) r += ') ' + (d.length === 11 ? d.slice(2, 7) + (d.length > 7 ? '-' + d.slice(7) : '')
+                                                  : d.slice(2, 6) + (d.length > 6 ? '-' + d.slice(6) : ''));
+  return r;
+}
+
+/** "Maria - Administrador" (Nome - Pastoral); se faltar algum, mostra o que houver. */
+function rotuloUsuario(u) {
+  if (!u) return '';
+  return [u.nome, u.pastoral].filter(Boolean).join(' - ') || u.rotulo || u.email || '';
+}
+
+/* =========================================================================
+   Estado
+   ========================================================================= */
+const estado = {
+  token: '',
+  usuario: null,       // { email, nome, pastoral, whatsapp, rotulo } da aba Autorizados
+  cfgPreCarregado: null,
+  cfg: null,
+  disp: null,          // disponibilidade da data escolhida
+  fp: null,            // instância flatpickr
+  timerAtualizacao: null,
+  enviando: false,
+  cal: null,           // dados do calendário
+  ano: null, mes: null, // mês exibido (1-12)
+  objNovo: null,       // bloco de mesas/cadeiras da nova reserva
+  objGerir: null,      // bloco de mesas/cadeiras da alteração
+  gerir: { fp: null, data: '', lista: [], sel: -1, disp: null, ocupado: false }
+};
+
+/* =========================================================================
+   Abas
+   ========================================================================= */
+function mostrarAba(qual) {
+  const form = qual === 'form';
+  $('visao-form').classList.toggle('hidden', !form);
+  $('visao-cal').classList.toggle('hidden', form);
+  [['aba-form', form], ['aba-cal', !form]].forEach(([id, ativo]) => {
+    const b = $(id);
+    b.setAttribute('aria-selected', ativo);
+    b.className = 'aba rounded-t-xl py-4 text-lg sm:text-xl font-bold transition ' +
+      (ativo ? 'bg-slate-100 text-marinho-800' : 'bg-marinho-700 text-white hover:bg-marinho-600');
+  });
+  if (!form) carregarCalendario();
+}
+$('aba-form').addEventListener('click', () => mostrarAba('form'));
+$('aba-cal').addEventListener('click', () => mostrarAba('cal'));
+
+/* =========================================================================
+   Campo com busca (digitar e escolher) — usado em Espaço e Pastoral
+   ========================================================================= */
+const normalizar = (t) => String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+
+function criarCombo(id, textoSemResultado) {
+  const input = $(id), lista = $(id + '-lista');
+  let opcoes = [], filtradas = [], valor = '', ativo = -1;
+  const api = { onChange: null };
+
+  const textoDo = (v) => (opcoes.find(o => o.valor === v) || {}).texto || '';
+
+  function abrir() {
+    if (input.disabled) return;
+    const mostrandoEscolhido = valor && input.value === textoDo(valor);
+    const q = mostrandoEscolhido ? '' : normalizar(input.value);
+    filtradas = opcoes.filter(o => o.fixo || !q || normalizar(o.texto).includes(q));
+    if (ativo >= filtradas.length) ativo = -1;
+    lista.innerHTML = filtradas.length
+      ? filtradas.map((o, i) => `<li role="option" id="${id}-op-${i}" data-i="${i}"
+            class="opcao${o.fixo ? ' fixa' : ''}${i === ativo ? ' ativa' : ''}"
+            aria-selected="${o.valor === valor}">${esc(o.texto)}</li>`).join('')
+      : `<li class="sem-opcao">${esc(textoSemResultado)}</li>`;
+    lista.classList.remove('hidden');
+    input.setAttribute('aria-expanded', 'true');
+    input.setAttribute('aria-activedescendant', ativo >= 0 ? `${id}-op-${ativo}` : '');
+    if (ativo >= 0) $(`${id}-op-${ativo}`).scrollIntoView({ block: 'nearest' });
+  }
+
+  function fechar() {
+    lista.classList.add('hidden');
+    input.setAttribute('aria-expanded', 'false');
+    ativo = -1;
+  }
+
+  function escolher(o) {
+    const mudou = o.valor !== valor;
+    valor = o.valor;
+    input.value = o.texto;
+    input.classList.remove('invalido');
+    fechar();
+    if (mudou && api.onChange) api.onChange(valor);
+  }
+
+  input.addEventListener('focus', abrir);
+  input.addEventListener('click', abrir);
+  input.addEventListener('input', () => {
+    if (valor) { valor = ''; if (api.onChange) api.onChange(''); }
+    ativo = -1;
+    abrir();
+  });
+  input.addEventListener('blur', () => {
+    // Se o texto digitado for exatamente uma opção, seleciona automaticamente
+    if (!valor && input.value.trim()) {
+      const exata = opcoes.find(o => !o.fixo && normalizar(o.texto) === normalizar(input.value));
+      if (exata) escolher(exata);
+    }
+    fechar();
+  });
+  input.addEventListener('keydown', (ev) => {
+    const aberta = !lista.classList.contains('hidden');
+    if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp') {
+      ev.preventDefault();
+      if (!aberta) { abrir(); return; }
+      if (!filtradas.length) return;
+      ativo = ev.key === 'ArrowDown' ? (ativo + 1) % filtradas.length
+                                     : (ativo <= 0 ? filtradas.length - 1 : ativo - 1);
+      abrir();
+    } else if (ev.key === 'Enter' && aberta) {
+      ev.preventDefault();
+      if (ativo >= 0) escolher(filtradas[ativo]);
+      else if (filtradas.filter(o => !o.fixo).length === 1) escolher(filtradas.find(o => !o.fixo));
+    } else if (ev.key === 'Escape') {
+      fechar();
+    }
+  });
+  lista.addEventListener('mousedown', (ev) => ev.preventDefault()); // mantém o foco no campo
+  lista.addEventListener('click', (ev) => {
+    const li = ev.target.closest('[data-i]');
+    if (li) escolher(filtradas[Number(li.dataset.i)]);
+  });
+
+  api.valor = () => valor;
+  api.input = input;
+  /** Define as opções (texto ou {valor, texto, fixo}). Com manter=true, preserva a escolha se ainda existir. Retorna true se a escolha anterior sumiu. */
+  api.setOpcoes = (arr, manter = false) => {
+    opcoes = arr.map(o => typeof o === 'string' ? { valor: o, texto: o } : o);
+    let perdeu = false;
+    if (manter && valor) {
+      if (!opcoes.some(o => o.valor === valor)) { perdeu = true; valor = ''; input.value = ''; if (api.onChange) api.onChange(''); }
+    } else if (!manter) {
+      const tinha = valor;
+      valor = ''; input.value = '';
+      if (tinha && api.onChange) api.onChange('');
+    }
+    if (!lista.classList.contains('hidden')) abrir();
+    return perdeu;
+  };
+  /** Seleciona um valor da lista (sem disparar onChange). */
+  api.selecionar = (v) => {
+    const o = opcoes.find(x => x.valor === v);
+    if (!o) return false;
+    valor = o.valor;
+    input.value = o.texto;
+    input.classList.remove('invalido');
+    return true;
+  };
+  api.habilitar = (sim, placeholder) => {
+    input.disabled = !sim;
+    if (placeholder !== undefined) input.placeholder = placeholder;
+    if (!sim) fechar();
+  };
+  api.limpar = () => api.setOpcoes(opcoes.slice());
+  return api;
+}
+
+const OUTRA_PASTORAL = '__outra__';
+estado.cbEspaco = criarCombo('espaco', 'Nenhum espaço livre com esse nome');
+estado.cbPastoral = criarCombo('pastoral', 'Nenhuma pastoral encontrada');
+estado.cbGerirEspaco = criarCombo('gerir-espaco', 'Nenhum espaço livre com esse nome');
+estado.cbPastoral.onChange = (v) => {
+  const outra = v === OUTRA_PASTORAL;
+  $('pastoral-outro-wrap').classList.toggle('hidden', !outra);
+  if (outra) setTimeout(() => $('pastoral-outro').focus(), 0);
+  else $('pastoral-outro').value = '';
+};
+
+/* =========================================================================
+   DADOS DO CADASTRO — Pastoral, Nome e WhatsApp vindos da aba Autorizados.
+   Ficam editáveis; se a planilha não tiver o dado, o campo fica em branco.
+   ========================================================================= */
+function atualizarCabecalho() {
+  $('usuario-nome').textContent = '👤 ' + rotuloUsuario(estado.usuario);
+}
+
+function preencherDadosUsuario() {
+  const u = estado.usuario || {};
+  $('nome').value = u.nome || '';
+  $('whatsapp').value = formatarWhats(u.whatsapp || '');
+
+  // Pastoral: se estiver na lista, seleciona; se não, usa "Outra" já com o nome digitado
+  estado.cbPastoral.limpar();
+  $('pastoral-outro').value = '';
+  $('pastoral-outro-wrap').classList.add('hidden');
+  const p = String(u.pastoral || '').trim();
+  if (p) {
+    const lista = (estado.cfg && estado.cfg.pastorais) || [];
+    const achada = lista.find(x => normalizar(x) === normalizar(p));
+    if (achada) {
+      estado.cbPastoral.selecionar(achada);
+    } else {
+      estado.cbPastoral.selecionar(OUTRA_PASTORAL);
+      $('pastoral-outro-wrap').classList.remove('hidden');
+      $('pastoral-outro').value = p;
+    }
+  }
+  $('info-cadastro').classList.toggle('hidden', !(u.nome || u.whatsapp || p));
+}
+
+/* =========================================================================
+   MESAS E CADEIRAS — bloco que aparece quando o espaço é "Externo"
+   (usado na nova reserva e na alteração)
+   ========================================================================= */
+function ehExterno(espaco) {
+  const nome = (estado.cfg && estado.cfg.espacoExterno) || 'Externo';
+  return !!espaco && normalizar(espaco) === normalizar(nome);
+}
+
+function criarObjetos(id) {
+  const raiz = $(id);
+  const ITENS = [['mesas', 'Mesas'], ['cadeiras', 'Cadeiras']];
+  let limites = { mesas: 100, cadeiras: 400 };
+
+  raiz.className = 'hidden rounded-xl border-2 border-ouro-400 bg-amber-50 p-4 sm:p-5';
+  raiz.innerHTML = `
+    <p id="${id}-pergunta" class="rotulo">Deseja reservar mesas, cadeiras e/ou algum item da Cozinha?</p>
+    <div class="grid grid-cols-2 gap-3" role="radiogroup" aria-labelledby="${id}-pergunta">
+      <label class="sn"><input type="radio" name="${id}-quer" value="sim"> Sim</label>
+      <label class="sn"><input type="radio" name="${id}-quer" value="nao"> Não</label>
+    </div>
+    <div id="${id}-opcoes" class="hidden mt-4 space-y-3">
+      <p class="ajuda">Marque o que precisa (pode marcar mais de uma opção).</p>
+      ${ITENS.map(([k, nome]) => `
+      <div class="item-obj">
+        <label class="flex items-center gap-3 text-lg font-bold cursor-pointer">
+          <input type="checkbox" id="${id}-${k}-chk" data-item="${k}" class="w-6 h-6"> ${nome}
+        </label>
+        <div id="${id}-${k}-wrap" class="hidden mt-3">
+          <label for="${id}-${k}-qtd" class="rotulo">Quantidade de ${k}</label>
+          <input id="${id}-${k}-qtd" type="number" inputmode="numeric" min="1" step="1" class="campo sm:w-48">
+          <p id="${id}-${k}-ajuda" class="ajuda"></p>
+        </div>
+      </div>`).join('')}
+      <div class="item-obj desativado">
+        <label class="flex flex-wrap items-center gap-3 text-lg font-bold">
+          <input type="checkbox" disabled class="w-6 h-6"> Itens da Cozinha
+          <span class="rounded-full bg-slate-200 text-slate-700 text-sm font-bold px-3 py-0.5">em breve</span>
+        </label>
+      </div>
+    </div>
+    <p id="${id}-erro" class="erro-campo hidden" role="alert"></p>`;
+
+  const el = (s) => $(`${id}-${s}`);
+  const radios = () => raiz.querySelectorAll(`input[name="${id}-quer"]`);
+  const resposta = () => { const r = raiz.querySelector(`input[name="${id}-quer"]:checked`); return r ? r.value : ''; };
+
+  function atualizar() {
+    el('opcoes').classList.toggle('hidden', resposta() !== 'sim');
+    ITENS.forEach(([k]) => el(`${k}-wrap`).classList.toggle('hidden', !el(`${k}-chk`).checked));
+  }
+  function limparErro() {
+    el('erro').classList.add('hidden');
+    raiz.querySelectorAll('.invalido').forEach(e => e.classList.remove('invalido'));
+  }
+
+  raiz.addEventListener('change', (ev) => {
+    limparErro();
+    atualizar();
+    const k = ev.target.dataset && ev.target.dataset.item;
+    if (k && ev.target.checked) setTimeout(() => el(`${k}-qtd`).focus(), 0);
+  });
+  ITENS.forEach(([k]) => {
+    // Só números inteiros, nunca acima do limite
+    el(`${k}-qtd`).addEventListener('input', (ev) => {
+      let v = String(ev.target.value).replace(/\D/g, '');
+      if (v && Number(v) > limites[k]) v = String(limites[k]);
+      if (ev.target.value !== v) ev.target.value = v;
+    });
+  });
+
+  const api = {};
+  api.setLimites = (mesas, cadeiras) => {
+    limites = { mesas: mesas || 100, cadeiras: cadeiras || 400 };
+    ITENS.forEach(([k]) => {
+      el(`${k}-qtd`).max = limites[k];
+      el(`${k}-qtd`).placeholder = `1 a ${limites[k]}`;
+      el(`${k}-ajuda`).textContent = `De 1 a ${limites[k]}.`;
+    });
+  };
+  api.limpar = () => {
+    radios().forEach(r => { r.checked = false; });
+    ITENS.forEach(([k]) => { el(`${k}-chk`).checked = false; el(`${k}-qtd`).value = ''; });
+    limparErro();
+    atualizar();
+  };
+  api.visivel = () => !raiz.classList.contains('hidden');
+  /** Mostra (espaço Externo) ou esconde o bloco. Ao aparecer ou sumir, começa limpo. */
+  api.mostrar = (sim) => {
+    const estava = api.visivel();
+    raiz.classList.toggle('hidden', !sim);
+    if (!sim || !estava) api.limpar();
+  };
+  /** Preenche com os dados de uma reserva existente (para alterar). */
+  api.preencher = (mesas, cadeiras) => {
+    api.limpar();
+    const tem = mesas > 0 || cadeiras > 0;
+    raiz.querySelector(`input[name="${id}-quer"][value="${tem ? 'sim' : 'nao'}"]`).checked = true;
+    if (mesas > 0) { el('mesas-chk').checked = true; el('mesas-qtd').value = mesas; }
+    if (cadeiras > 0) { el('cadeiras-chk').checked = true; el('cadeiras-qtd').value = cadeiras; }
+    atualizar();
+  };
+  /** Retorna { erro, foco } ou { erro: null, valor } — valor = null quando o bloco está escondido. */
+  api.validar = () => {
+    if (!api.visivel()) return { erro: null, valor: null };
+    limparErro();
+    const falha = (msg, foco) => {
+      el('erro').textContent = msg;
+      el('erro').classList.remove('hidden');
+      if (foco && foco.classList.contains('campo')) foco.classList.add('invalido');
+      return { erro: msg, foco: foco || radios()[0] };
+    };
+    const r = resposta();
+    if (!r) return falha('Responda Sim ou Não: deseja reservar mesas e/ou cadeiras?', radios()[0]);
+    if (r === 'nao') return { erro: null, valor: { quer: false } };
+
+    const v = { quer: true, mesas: 0, cadeiras: 0 };
+    for (const [k] of ITENS) {
+      if (!el(`${k}-chk`).checked) continue;
+      const campo = el(`${k}-qtd`);
+      const n = Number(campo.value);
+      if (!campo.value || !Number.isInteger(n) || n < 1 || n > limites[k]) {
+        return falha(`Informe a quantidade de ${k}: de 1 a ${limites[k]}.`, campo);
+      }
+      v[k] = n;
+    }
+    if (!v.mesas && !v.cadeiras) return falha('Você respondeu Sim: marque Mesas e/ou Cadeiras.', el('mesas-chk'));
+    return { erro: null, valor: v };
+  };
+  return api;
+}
+
+estado.cbEspaco.onChange = (v) => { if (estado.objNovo) estado.objNovo.mostrar(ehExterno(v)); };
+estado.cbGerirEspaco.onChange = (v) => { if (estado.objGerir) estado.objGerir.mostrar(ehExterno(v)); };
+
+/* =========================================================================
+   VISÃO 1 — FORMULÁRIO
+   ========================================================================= */
+async function iniciarFormulario() {
+  try {
+    const cfg = estado.cfgPreCarregado || await rpcAuth('getDadosIniciais');
+    estado.cfgPreCarregado = null;
+    estado.cfg = cfg;
+    // Dados atualizados da aba Autorizados (cabeçalho + pré-preenchimento)
+    if (cfg.usuario) {
+      guardarUsuario(cfg.usuario);
+      atualizarCabecalho();
+    }
+    $('mot-min').textContent = cfg.motivoMin;
+    $('mot-max').textContent = cfg.motivoMax;
+    $('motivo').setAttribute('maxlength', cfg.motivoMax);
+    $('gerir-mot-min').textContent = cfg.motivoMin;
+    $('gerir-mot-max').textContent = cfg.motivoMax;
+    $('gerir-motivo').setAttribute('maxlength', cfg.motivoMax);
+    atualizarContador();
+
+    if (!estado.objNovo) {
+      estado.objNovo = criarObjetos('objetos-novo');
+      estado.objGerir = criarObjetos('objetos-gerir');
+    }
+    estado.objNovo.setLimites(cfg.mesasMax, cfg.cadeirasMax);
+    estado.objGerir.setLimites(cfg.mesasMax, cfg.cadeirasMax);
+
+    estado.cbPastoral.setOpcoes([
+      ...(cfg.pastorais || []),
+      { valor: OUTRA_PASTORAL, texto: 'Outra (digitar o nome)', fixo: true }
+    ]);
+    preencherDadosUsuario();
+
+    const datasBloqueadas = cfg.bloqueios.map(b => b.data);
+    if (cfg.hojeEhSabado) datasBloqueadas.push(somarDias(cfg.hoje, 1)); // Regra do sábado (redundante c/ minDate, por segurança)
+
+    estado.fp = flatpickr('#data', {
+      locale: 'pt',
+      dateFormat: 'Y-m-d', // formato interno; o usuário vê o altFormat abaixo
+      altInput: true,
+      altFormat: 'l, d/m/Y',
+      altInputClass: 'campo',
+      minDate: cfg.minData,
+      maxDate: cfg.maxData,
+      disable: datasBloqueadas,
+      disableMobile: true,
+      onChange: (sel, str) => { if (str) carregarDisponibilidade(str); }
+    });
+
+    // Calendário do pop-up de alteração/cancelamento: qualquer dia a partir de AMANHÃ
+    // (regra: alterar/cancelar só até o dia anterior à reserva). Usa amanhã, e não a
+    // minData da nova reserva, para o coordenador poder, num sábado, cancelar a
+    // reserva que ele já tinha para o domingo.
+    const amanha = somarDias(cfg.hoje, 1);
+    estado.gerir.fp = flatpickr('#gerir-data', {
+      locale: 'pt',
+      dateFormat: 'Y-m-d',
+      altInput: true,
+      altFormat: 'l, d/m/Y',
+      altInputClass: 'campo',
+      minDate: amanha > cfg.periodoInicio ? amanha : cfg.periodoInicio,
+      maxDate: cfg.maxData,
+      disableMobile: true,
+      onChange: () => { limparResultadoGerir(); esconderMsgGerir(); }
+    });
+
+    let infoRegra = `Primeira data disponível: <b>${dataCurta(cfg.minData)}</b>.`;
+    if (cfg.hojeEhSabado) infoRegra += ' Hoje é sábado: reservas somente a partir de segunda-feira.';
+    infoRegra += ` Reservas aceitas até <b>${dataCurta(cfg.maxData)}</b>.`;
+    $('info-data').innerHTML = infoRegra;
+
+    $('carregando-inicial').classList.add('hidden');
+    $('form-reserva').classList.remove('hidden');
+  } catch (e) {
+    $('carregando-inicial').innerHTML =
+      '<span class="text-red-700">Não foi possível carregar o sistema. Recarregue a página.</span>';
+    console.error(e);
+  }
+}
+
+function somarDias(isoStr, n) {
+  const { a, m, d } = partes(isoStr);
+  const dt = new Date(Date.UTC(a, m - 1, d + n));
+  return iso(dt.getUTCFullYear(), dt.getUTCMonth() + 1, dt.getUTCDate());
+}
+
+async function carregarDisponibilidade(data, silencioso = false) {
+  const turnoSel = $('turno'), cb = estado.cbEspaco;
+  const turnoAnterior = turnoSel.value;
+
+  if (!silencioso) {
+    esconderMsg();
+    turnoSel.disabled = true;
+    turnoSel.innerHTML = '<option value="">Verificando disponibilidade...</option>';
+    cb.habilitar(false, 'Aguarde...');
+  }
+
+  try {
+    const disp = await rpcAuth('getDisponibilidade', data);
+    if (disp.data !== $('data').value) return; // usuário trocou a data no meio do caminho
+    estado.disp = disp;
+
+    const bloqueados = disp.turnosBloqueados || {};
+    // "Dia inteiro" fica de fora do aviso: ele é consequência do bloqueio do outro turno
+    const turnosAviso = Object.keys(bloqueados).filter(t => normalizar(t) !== 'dia inteiro');
+    const avisoBloqueio = turnosAviso.length
+      ? 'Atenção: nesta data, ' + turnosAviso
+          .map(t => `o turno ${t} está bloqueado (${bloqueados[t]})`).join('; ') + '.'
+      : '';
+    const semVaga = Object.values(disp.disponiveis).every(l => l.length === 0);
+    if (!disp.permitida || semVaga) {
+      turnoSel.disabled = true;
+      turnoSel.innerHTML = `<option value="">${disp.permitida ? 'Nenhum turno disponível' : 'Data indisponível'}</option>`;
+      cb.setOpcoes([]);
+      cb.habilitar(false, '—');
+      mostrarMsg(!disp.permitida ? disp.mensagem
+        : (avisoBloqueio ? avisoBloqueio + ' Não há outro espaço livre nesta data. Escolha outro dia.'
+                         : 'Não há nenhum espaço livre nesta data. Escolha outro dia.'), 'erro');
+      return;
+    }
+
+    turnoSel.innerHTML = '<option value="">Selecione o turno</option>' +
+      estado.cfg.turnos.map(t => (disp.disponiveis[t] || []).length > 0
+        ? `<option value="${esc(t)}">${esc(t)}</option>`
+        : `<option value="${esc(t)}" disabled>${esc(t)} — ${bloqueados[t] ? 'BLOQUEADO' : 'LOTADO'}</option>`
+      ).join('');
+    turnoSel.disabled = false;
+    if (avisoBloqueio && !silencioso) mostrarMsg(avisoBloqueio, 'aviso');
+
+    // Mantém a escolha anterior se ainda for válida
+    if (turnoAnterior && (disp.disponiveis[turnoAnterior] || []).length) {
+      turnoSel.value = turnoAnterior;
+      preencherEspacos(true, silencioso);
+    } else {
+      preencherEspacos(false);
+    }
+    agendarAtualizacao();
+  } catch (e) {
+    console.error(e);
+    if (!silencioso) mostrarMsg('Erro ao consultar a disponibilidade. Tente novamente.', 'erro');
+  }
+}
+
+function preencherEspacos(manter = false, silencioso = false) {
+  const turno = $('turno').value, cb = estado.cbEspaco;
+  if (!turno) {
+    cb.setOpcoes([]);
+    cb.habilitar(false, 'Escolha o turno primeiro');
+    return;
+  }
+  const anterior = cb.valor();
+  const livres = (estado.disp && estado.disp.disponiveis[turno]) || [];
+  const perdeu = cb.setOpcoes(livres, manter);
+  cb.habilitar(true, 'Digite ou escolha o espaço');
+  if (perdeu && silencioso) {
+    mostrarMsg(`Atenção: "${anterior}" acabou de ser reservado por outra pessoa. Escolha outro espaço.`, 'aviso');
+  }
+}
+
+/* Atualiza a disponibilidade a cada 45s enquanto o formulário está aberto */
+function agendarAtualizacao() {
+  clearTimeout(estado.timerAtualizacao);
+  estado.timerAtualizacao = setTimeout(() => {
+    const data = $('data').value;
+    const modalAberto = !$('modal-gerir').classList.contains('hidden');
+    if (data && !estado.enviando && !modalAberto && !$('visao-form').classList.contains('hidden')) {
+      carregarDisponibilidade(data, true);
+    } else {
+      agendarAtualizacao();
+    }
+  }, 45000);
+}
+
+$('turno').addEventListener('change', () => { esconderMsg(); preencherEspacos(false); });
+
+/* Máscara de WhatsApp enquanto digita */
+$('whatsapp').addEventListener('input', (ev) => {
+  ev.target.value = formatarWhats(ev.target.value);
+});
+
+/* Contador do motivo */
+function atualizarContador() {
+  const max = estado.cfg ? estado.cfg.motivoMax : 50, min = estado.cfg ? estado.cfg.motivoMin : 7;
+  const n = $('motivo').value.trim().length;
+  const c = $('contador-motivo');
+  c.textContent = `${n}/${max}`;
+  c.className = 'ajuda font-bold ' + (n === 0 ? 'text-slate-600' : (n < min || n > max) ? 'text-red-700' : 'text-green-700');
+}
+$('motivo').addEventListener('input', atualizarContador);
+
+/* Mensagens */
+function mostrarMsg(texto, tipo) {
+  const el = $('msg-form');
+  const estilos = {
+    erro: 'bg-red-50 border-2 border-red-700 text-red-800',
+    aviso: 'bg-amber-50 border-2 border-amber-600 text-amber-900',
+    ok: 'bg-green-50 border-2 border-green-700 text-green-800'
+  };
+  el.className = 'rounded-xl p-4 text-lg font-semibold ' + (estilos[tipo] || estilos.erro);
+  el.textContent = texto;
+  el.classList.remove('hidden');
+}
+function esconderMsg() { $('msg-form').classList.add('hidden'); }
+
+/* Validação no cliente (o servidor valida de novo) */
+function validar() {
+  document.querySelectorAll('.erro-campo:not([id$="-erro"])').forEach(e => e.remove());
+  document.querySelectorAll('.invalido').forEach(e => e.classList.remove('invalido'));
+  const erros = [];
+  const cfg = estado.cfg;
+  const v = {
+    data: $('data').value,
+    turno: $('turno').value,
+    espaco: estado.cbEspaco.valor(),
+    pastoral: estado.cbPastoral.valor() === OUTRA_PASTORAL
+      ? $('pastoral-outro').value.trim()
+      : estado.cbPastoral.valor(),
+    nome: $('nome').value.trim(),
+    whatsapp: $('whatsapp').value.trim(),
+    motivo: $('motivo').value.trim(),
+    objetos: null
+  };
+  const marcar = (id, msg) => {
+    const campo = id === 'data' ? estado.fp.altInput : $(id);
+    campo.classList.add('invalido');
+    const p = document.createElement('p');
+    p.className = 'erro-campo';
+    p.textContent = msg;
+    (campo.closest('.relative') || campo).insertAdjacentElement('afterend', p);
+    erros.push(campo);
+  };
+  if (!v.data) marcar('data', 'Escolha a data.');
+  if (!v.turno) marcar('turno', 'Escolha o turno.');
+  if (!v.espaco) marcar('espaco', $('espaco').value.trim() ? 'Escolha um espaço da lista.' : 'Escolha o espaço.');
+  const ob = estado.objNovo ? estado.objNovo.validar() : { erro: null, valor: null };
+  if (ob.erro) erros.push(ob.foco);
+  else v.objetos = ob.valor;
+  if (!estado.cbPastoral.valor()) {
+    marcar('pastoral', $('pastoral').value.trim()
+      ? 'Escolha uma pastoral da lista (ou "Outra").' : 'Escolha a pastoral ou movimento.');
+  } else if (v.pastoral.length < 2) {
+    marcar('pastoral-outro', 'Digite o nome da pastoral ou movimento.');
+  }
+  if (v.nome.length < 3) marcar('nome', 'Informe seu nome completo.');
+  const dig = v.whatsapp.replace(/\D/g, '').length;
+  if (dig < 10 || dig > 11) marcar('whatsapp', 'Informe o WhatsApp com DDD.');
+  if (v.motivo.length < cfg.motivoMin) marcar('motivo', `O motivo precisa ter pelo menos ${cfg.motivoMin} caracteres.`);
+  else if (v.motivo.length > cfg.motivoMax) marcar('motivo', `O motivo pode ter no máximo ${cfg.motivoMax} caracteres.`);
+
+  if (erros.length) { erros[0].focus(); erros[0].scrollIntoView({ behavior: 'smooth', block: 'center' }); return null; }
+  return v;
+}
+
+/* Envio */
+$('form-reserva').addEventListener('submit', async (ev) => {
+  ev.preventDefault();
+  if (estado.enviando) return;
+  esconderMsg();
+  const dados = validar();
+  if (!dados) return;
+
+  estado.enviando = true;
+  const btn = $('btn-enviar');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Salvando reserva...';
+
+  try {
+    const r = await rpcAuth('salvarReserva', dados);
+    if (r.ok) {
+      abrirModalSucesso('Reserva confirmada!', r.reserva, dados.nome);
+      limparFormulario();
+      estado.cal = null; // força recarregar o calendário
+    } else {
+      mostrarMsg(r.mensagem, r.codigo === 'VALIDACAO' ? 'erro' : 'aviso');
+      if (r.codigo === 'CONFLITO') carregarDisponibilidade(dados.data, true);
+    }
+  } catch (e) {
+    console.error(e);
+    mostrarMsg('Falha de conexão. Verifique a internet e tente novamente.', 'erro');
+  } finally {
+    estado.enviando = false;
+    btn.disabled = false;
+    btn.innerHTML = '✅ Confirmar Reserva';
+  }
+});
+
+function limparFormulario() {
+  $('form-reserva').reset();
+  estado.fp.clear();
+  estado.disp = null;
+  clearTimeout(estado.timerAtualizacao);
+  $('turno').innerHTML = '<option value="">Escolha a data primeiro</option>';
+  $('turno').disabled = true;
+  estado.cbEspaco.setOpcoes([]);
+  estado.cbEspaco.habilitar(false, 'Escolha o turno primeiro');
+  if (estado.objNovo) estado.objNovo.mostrar(false);
+  preencherDadosUsuario(); // volta Pastoral, Nome e WhatsApp do cadastro
+  atualizarContador();
+}
+
+function abrirModalSucesso(titulo, res, nome) {
+  $('modal-ok-titulo').textContent = titulo;
+  $('modal-resumo').innerHTML = `
+    <p><b>Data:</b> ${esc(dataLonga(res.data))}</p>
+    <p><b>Turno:</b> ${esc(res.turno)}</p>
+    <p><b>Espaço:</b> ${esc(res.espaco)}</p>
+    ${res.mesas > 0 ? `<p><b>Mesas:</b> ${esc(res.mesas)}</p>` : ''}
+    ${res.cadeiras > 0 ? `<p><b>Cadeiras:</b> ${esc(res.cadeiras)}</p>` : ''}
+    ${res.pastoral ? `<p><b>Pastoral:</b> ${esc(res.pastoral)}</p>` : ''}
+    ${res.motivo ? `<p><b>Motivo:</b> ${esc(res.motivo)}</p>` : ''}
+    ${nome ? `<p><b>Responsável:</b> ${esc(nome)}</p>` : ''}`;
+  const m = $('modal-ok');
+  m.classList.remove('hidden'); m.classList.add('flex');
+  $('btn-modal-ok').focus();
+}
+$('btn-modal-ok').addEventListener('click', () => {
+  const m = $('modal-ok');
+  m.classList.add('hidden'); m.classList.remove('flex');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+});
+
+/* =========================================================================
+   ALTERAR / CANCELAR RESERVA
+   ========================================================================= */
+function abrirGerir() {
+  const m = $('modal-gerir');
+  m.classList.remove('hidden'); m.classList.add('flex');
+  document.body.style.overflow = 'hidden';
+  limparResultadoGerir();
+  esconderMsgGerir();
+  setTimeout(() => { if (estado.gerir.fp) estado.gerir.fp.altInput.focus(); }, 50);
+}
+
+function fecharGerir() {
+  const m = $('modal-gerir');
+  m.classList.add('hidden'); m.classList.remove('flex');
+  document.body.style.overflow = '';
+  $('btn-abrir-gerir').focus();
+}
+
+function msgGerir(texto, tipo) {
+  const el = $('gerir-msg');
+  const estilos = {
+    erro: 'bg-red-50 border-2 border-red-700 text-red-800',
+    aviso: 'bg-amber-50 border-2 border-amber-600 text-amber-900',
+    ok: 'bg-green-50 border-2 border-green-700 text-green-800'
+  };
+  el.className = 'mt-4 rounded-xl p-4 text-lg font-semibold ' + (estilos[tipo] || estilos.erro);
+  el.textContent = texto;
+  el.classList.remove('hidden');
+}
+function esconderMsgGerir() { $('gerir-msg').classList.add('hidden'); }
+
+/** Esconde lista, botões, confirmação e formulário de alteração. */
+function limparResultadoGerir() {
+  const g = estado.gerir;
+  g.lista = []; g.sel = -1; g.disp = null;
+  $('gerir-lista').innerHTML = '';
+  $('gerir-lista-wrap').classList.add('hidden');
+  $('gerir-acoes').classList.add('hidden');
+  $('gerir-conf-cancelar').classList.add('hidden');
+  $('gerir-form-alterar').classList.add('hidden');
+}
+
+$('btn-abrir-gerir').addEventListener('click', abrirGerir);
+$('btn-gerir-fechar').addEventListener('click', fecharGerir);
+$('modal-gerir').addEventListener('click', (ev) => { if (ev.target === $('modal-gerir')) fecharGerir(); });
+document.addEventListener('keydown', (ev) => {
+  if (ev.key !== 'Escape') return;
+  if (!$('modal-ok').classList.contains('hidden')) return; // o aviso de sucesso está por cima
+  if (!$('modal-gerir').classList.contains('hidden')) fecharGerir();
+});
+
+$('btn-gerir-buscar').addEventListener('click', () => buscarMinhasReservas());
+
+async function buscarMinhasReservas(manterMensagem = false) {
+  const g = estado.gerir;
+  const data = $('gerir-data').value;
+  if (!data) { msgGerir('Escolha a data da reserva.', 'erro'); return; }
+  if (!manterMensagem) esconderMsgGerir();
+  limparResultadoGerir();
+  g.data = data;
+
+  const btn = $('btn-gerir-buscar');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Procurando...';
+  try {
+    const r = await rpcAuth('getMinhasReservas', data);
+    if (!r.ok) { msgGerir(r.mensagem || 'Não foi possível consultar.', 'erro'); return; }
+    g.lista = r.reservas || [];
+    g.podeAlterar = !!r.podeAlterar;
+    g.podeCancelar = !!r.podeCancelar;
+
+    if (!g.lista.length) {
+      // Depois de cancelar, mantém na tela o aviso "Reserva cancelada".
+      if (!manterMensagem) msgGerir('Nenhuma reserva sua encontrada em ' + dataCurta(data) + '.', 'aviso');
+      return;
+    }
+    if (r.aviso && !manterMensagem) msgGerir(r.aviso, 'aviso');
+
+    $('gerir-lista').innerHTML = g.lista.map((x, i) => {
+      const objetos = resumoObjetos(x);
+      return `
+      <label class="item-reserva" data-i="${i}">
+        <div class="flex items-start gap-3">
+          <input type="radio" name="gerir-res" value="${i}" class="w-6 h-6 mt-1 shrink-0">
+          <div>
+            <p class="text-lg font-extrabold text-marinho-800">${esc(x.espaco)}</p>
+            <p class="text-base text-slate-700">Turno: <b>${esc(x.turno)}</b></p>
+            ${objetos ? `<p class="text-base text-slate-700">Itens: <b>${esc(objetos)}</b></p>` : ''}
+            <p class="text-base text-slate-700">Pastoral: ${esc(x.pastoral || '—')}</p>
+            <p class="text-base text-slate-700">Motivo: ${esc(x.motivo || '—')}</p>
+          </div>
+        </div>
+      </label>`;
+    }).join('');
+    $('gerir-lista-wrap').classList.remove('hidden');
+    $('gerir-acoes').classList.remove('hidden');
+    $('btn-gerir-alterar').disabled = true;
+    $('btn-gerir-cancelar').disabled = true;
+  } catch (e) {
+    console.error(e);
+    msgGerir('Falha de conexão. Verifique a internet e tente novamente.', 'erro');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '🔎 Buscar minhas reservas';
+  }
+}
+
+$('gerir-lista').addEventListener('change', (ev) => {
+  const radio = ev.target.closest('input[name="gerir-res"]');
+  if (!radio) return;
+  const g = estado.gerir;
+  g.sel = Number(radio.value);
+  document.querySelectorAll('#gerir-lista .item-reserva').forEach((el, i) => {
+    el.classList.toggle('escolhida', i === g.sel);
+  });
+  $('gerir-conf-cancelar').classList.add('hidden');
+  $('gerir-form-alterar').classList.add('hidden');
+  $('btn-gerir-alterar').disabled = !g.podeAlterar;
+  $('btn-gerir-cancelar').disabled = !g.podeCancelar;
+});
+
+/* ---------- CANCELAR ---------- */
+$('btn-gerir-cancelar').addEventListener('click', () => {
+  const g = estado.gerir;
+  if (g.sel < 0) return;
+  const r = g.lista[g.sel];
+  const objetos = resumoObjetos(r);
+  $('gerir-form-alterar').classList.add('hidden');
+  $('gerir-conf-texto').innerHTML =
+    `<b>${esc(r.espaco)}</b> — ${esc(r.turno)}<br>${esc(dataLonga(g.data))}` +
+    (objetos ? `<br>Itens: ${esc(objetos)}` : '');
+  $('gerir-conf-cancelar').classList.remove('hidden');
+  $('btn-conf-cancelar-nao').focus();
+});
+$('btn-conf-cancelar-nao').addEventListener('click', () => {
+  $('gerir-conf-cancelar').classList.add('hidden');
+});
+$('btn-conf-cancelar-sim').addEventListener('click', async () => {
+  const g = estado.gerir;
+  if (g.sel < 0 || g.ocupado) return;
+  const r = g.lista[g.sel];
+  const btn = $('btn-conf-cancelar-sim');
+  g.ocupado = true;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Cancelando...';
+  try {
+    const resp = await rpcAuth('cancelarReserva', { data: g.data, turno: r.turno, espaco: r.espaco });
+    if (resp.ok) {
+      estado.cal = null; // o calendário precisa ser recarregado
+      $('gerir-conf-cancelar').classList.add('hidden');
+      msgGerir(`Reserva cancelada: ${r.espaco} — ${r.turno}, ${dataCurta(g.data)}.`, 'ok');
+      await buscarMinhasReservas(true);
+      if ($('data').value === g.data) carregarDisponibilidade(g.data, true);
+    } else {
+      msgGerir(resp.mensagem, 'erro');
+      if (resp.codigo === 'NAO_ENCONTRADA') buscarMinhasReservas(true);
+    }
+  } catch (e) {
+    console.error(e);
+    msgGerir('Falha de conexão. Verifique a internet e tente novamente.', 'erro');
+  } finally {
+    g.ocupado = false;
+    btn.disabled = false;
+    btn.innerHTML = 'Sim, cancelar';
+  }
+});
+
+/* ---------- ALTERAR ---------- */
+$('btn-gerir-alterar').addEventListener('click', async () => {
+  const g = estado.gerir;
+  if (g.sel < 0) return;
+  const r = g.lista[g.sel];
+  $('gerir-conf-cancelar').classList.add('hidden');
+
+  const btn = $('btn-gerir-alterar');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Carregando...';
+  try {
+    // A própria reserva é ignorada na checagem, para poder ser mantida ou trocada
+    const disp = await rpcAuth('getDisponibilidade', g.data, { turno: r.turno, espaco: r.espaco });
+    if (!disp.permitida) { msgGerir(disp.mensagem, 'erro'); return; }
+    g.disp = disp;
+
+    const bloqueados = disp.turnosBloqueados || {};
+    $('gerir-turno').innerHTML = estado.cfg.turnos.map(t => {
+      const livre = (disp.disponiveis[t] || []).length > 0;
+      const sel = t === r.turno ? ' selected' : '';
+      return livre
+        ? `<option value="${esc(t)}"${sel}>${esc(t)}</option>`
+        : `<option value="${esc(t)}" disabled>${esc(t)} — ${bloqueados[t] ? 'BLOQUEADO' : 'LOTADO'}</option>`;
+    }).join('');
+    if ((disp.disponiveis[r.turno] || []).length === 0) $('gerir-turno').value = '';
+
+    preencherEspacosGerir(r.espaco);
+    // Mesas/cadeiras: mostra já preenchido quando a reserva é do espaço Externo
+    if (estado.cbGerirEspaco.valor() === r.espaco && ehExterno(r.espaco)) {
+      estado.objGerir.mostrar(true);
+      estado.objGerir.preencher(r.mesas || 0, r.cadeiras || 0);
+    } else {
+      estado.objGerir.mostrar(false);
+    }
+    $('gerir-motivo').value = r.motivo || '';
+    atualizarContadorGerir();
+    $('gerir-form-alterar').classList.remove('hidden');
+    $('gerir-turno').focus();
+  } catch (e) {
+    console.error(e);
+    msgGerir('Não foi possível carregar as opções. Tente novamente.', 'erro');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '✏️ Alterar';
+  }
+});
+
+function preencherEspacosGerir(preSelecionar) {
+  const turno = $('gerir-turno').value;
+  const cb = estado.cbGerirEspaco;
+  const livres = (estado.gerir.disp && estado.gerir.disp.disponiveis[turno]) || [];
+  cb.setOpcoes(livres);
+  cb.habilitar(true, livres.length ? 'Digite ou escolha o espaço' : 'Nenhum espaço livre neste turno');
+  if (preSelecionar) cb.selecionar(preSelecionar);
+}
+$('gerir-turno').addEventListener('change', () => preencherEspacosGerir());
+
+function atualizarContadorGerir() {
+  const max = estado.cfg ? estado.cfg.motivoMax : 50, min = estado.cfg ? estado.cfg.motivoMin : 7;
+  const n = $('gerir-motivo').value.trim().length;
+  const c = $('gerir-contador');
+  c.textContent = `${n}/${max}`;
+  c.className = 'ajuda font-bold ' + (n === 0 ? 'text-slate-600' : (n < min || n > max) ? 'text-red-700' : 'text-green-700');
+}
+$('gerir-motivo').addEventListener('input', atualizarContadorGerir);
+$('btn-gerir-voltar').addEventListener('click', () => $('gerir-form-alterar').classList.add('hidden'));
+
+$('gerir-form-alterar').addEventListener('submit', async (ev) => {
+  ev.preventDefault();
+  const g = estado.gerir;
+  if (g.sel < 0 || g.ocupado) return;
+  const r = g.lista[g.sel];
+  const novoTurno = $('gerir-turno').value;
+  const novoEspaco = estado.cbGerirEspaco.valor();
+  const novoMotivo = $('gerir-motivo').value.trim();
+  const cfg = estado.cfg;
+
+  if (!novoTurno) { msgGerir('Escolha o turno.', 'erro'); return; }
+  if (!novoEspaco) { msgGerir('Escolha um espaço da lista.', 'erro'); return; }
+  const ob = estado.objGerir.validar();
+  if (ob.erro) { msgGerir(ob.erro, 'erro'); if (ob.foco) ob.foco.focus(); return; }
+  if (novoMotivo.length < cfg.motivoMin || novoMotivo.length > cfg.motivoMax) {
+    msgGerir(`O motivo deve ter entre ${cfg.motivoMin} e ${cfg.motivoMax} caracteres.`, 'erro');
+    return;
+  }
+
+  const btn = $('btn-gerir-salvar');
+  g.ocupado = true;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Salvando...';
+  try {
+    const resp = await rpcAuth('alterarReserva', {
+      data: g.data, turno: r.turno, espaco: r.espaco,
+      novoTurno: novoTurno, novoEspaco: novoEspaco, novoMotivo: novoMotivo,
+      novoObjetos: ob.valor
+    });
+    if (resp.ok) {
+      estado.cal = null;
+      $('gerir-form-alterar').classList.add('hidden');
+      msgGerir('Reserva alterada com sucesso. A versão anterior ficou registrada.', 'ok');
+      await buscarMinhasReservas(true);
+      if ($('data').value === g.data) carregarDisponibilidade(g.data, true);
+      abrirModalSucesso('Reserva alterada!', resp.reserva, '');
+    } else {
+      msgGerir(resp.mensagem, resp.codigo === 'VALIDACAO' ? 'erro' : 'aviso');
+      if (resp.codigo === 'NAO_ENCONTRADA') buscarMinhasReservas(true);
+    }
+  } catch (e) {
+    console.error(e);
+    msgGerir('Falha de conexão. Verifique a internet e tente novamente.', 'erro');
+  } finally {
+    g.ocupado = false;
+    btn.disabled = false;
+    btn.innerHTML = '✅ Salvar alteração';
+  }
+});
+
+/* =========================================================================
+   VISÃO 2 — CALENDÁRIO (todo o período: 2 anos)
+   ========================================================================= */
+const mesIso = (ano, mes) => `${ano}-${pad(mes)}`;
+
+function somarMeses(ano, mes, delta) {
+  const total = (ano * 12 + (mes - 1)) + delta;
+  return { ano: Math.floor(total / 12), mes: (total % 12) + 1 };
+}
+
+async function carregarCalendario(forcar = false) {
+  if (estado.cal && !forcar) { desenharMes(); return; }
+  $('cal-status').innerHTML = '<span class="spinner"></span> Carregando calendário...';
+  try {
+    estado.cal = await rpcAuth('getDadosCalendario');
+    const cal = estado.cal;
+    cal.limMin = cal.periodoInicio.slice(0, 7);
+    cal.limMax = cal.periodoFim.slice(0, 7);
+    if (estado.ano === null) irParaHoje();
+    const s = $('seletor-mes');
+    s.min = cal.limMin;
+    s.max = cal.limMax;
+    $('info-periodo').textContent =
+      `Período disponível: ${dataCurta(cal.periodoInicio)} a ${dataCurta(cal.periodoFim)}.`;
+    $('cal-status').textContent = '';
+    desenharMes();
+  } catch (e) {
+    console.error(e);
+    $('cal-status').innerHTML = '<span class="text-red-700">Erro ao carregar o calendário. Tente novamente.</span>';
+  }
+}
+
+function irParaHoje() {
+  const cal = estado.cal;
+  const alvo = cal.hoje < cal.periodoInicio ? cal.periodoInicio
+             : (cal.hoje > cal.periodoFim ? cal.periodoFim : cal.hoje);
+  const { a, m } = partes(alvo);
+  estado.ano = a; estado.mes = m;
+}
+
+function desenharMes() {
+  const { ano, mes } = estado;
+  const cal = estado.cal;
+  const atual = mesIso(ano, mes);
+  $('titulo-mes').textContent = `${MESES[mes - 1]} ${ano}`;
+  $('seletor-mes').value = atual;
+  $('btn-ant').disabled = atual <= cal.limMin;
+  $('btn-prox').disabled = atual >= cal.limMax;
+
+  const primeiroDow = new Date(Date.UTC(ano, mes - 1, 1)).getUTCDay();
+  const diasNoMes = new Date(Date.UTC(ano, mes, 0)).getUTCDate();
+  let html = '';
+  for (let i = 0; i < primeiroDow; i++) html += '<div class="dia rounded-lg bg-slate-50"></div>';
+
+  for (let d = 1; d <= diasNoMes; d++) {
+    const dataIso = iso(ano, mes, d);
+    const bloq = cal.bloqueios[dataIso];
+    const bloqTurnos = (cal.bloqueiosTurno || {})[dataIso] || [];
+    const nomesBloq = [...new Set(bloqTurnos.map(b => b.turno))].join(', ');
+    const res = (cal.resumo || {})[dataIso] || null;
+    const total = res ? res.n : 0;
+    const ehHoje = dataIso === cal.hoje;
+    const passado = dataIso < cal.hoje;
+
+    // Texto dos espaços: até 3 nomes + "+N espaços"
+    let textoEspacos = '';
+    if (res && res.e.length) {
+      const restantes = res.u - res.e.length;
+      textoEspacos = res.e.join(', ') + (restantes > 0
+        ? ` +${restantes} ${restantes === 1 ? 'espaço' : 'espaços'}` : '');
+    }
+
+    const rotulo = `${d} de ${MESES[mes - 1]}` +
+      (bloq ? `, bloqueado: ${bloq.motivo}` : total ? `, ${plural(total, 'reserva', 'reservas')}` : ', sem reservas') +
+      (!bloq && textoEspacos ? `: ${textoEspacos}` : '') +
+      (!bloq && nomesBloq ? `, turno bloqueado: ${nomesBloq}` : '');
+
+    let classes = 'dia rounded-lg p-1.5 sm:p-2 text-left flex flex-col gap-1 border-2 transition hover:shadow-md focus:z-10 ';
+    if (bloq) classes += 'bg-red-700 border-red-800 text-white hover:bg-red-800 ';
+    else classes += (passado ? 'bg-slate-50 text-slate-400 ' : 'bg-white ') + 'border-slate-200 hover:border-marinho-600 ';
+    if (ehHoje) classes += 'ring-4 ring-ouro-400 ';
+
+    let corpo = '';
+    if (bloq) {
+      corpo = `<span class="text-[0.65rem] sm:text-sm font-bold leading-tight line-clamp-3">Bloqueado - ${esc(bloq.motivo)}</span>`;
+    } else {
+      if (total > 0) {
+        // Dias passados: número e nomes em cinza
+        const corBadge = passado ? 'bg-slate-300 text-slate-600' : 'bg-marinho-600 text-white';
+        corpo += `<span class="self-start rounded-full ${corBadge} font-bold px-1.5 sm:px-2.5 py-0.5 text-[0.65rem] sm:text-sm leading-tight">
+                   ${total}<span class="hidden sm:inline"> ${total === 1 ? 'Reserva' : 'Reservas'}</span></span>`;
+      }
+      if (textoEspacos) {
+        const corTexto = passado ? 'text-slate-400' : 'text-slate-700';
+        corpo += `<span class="hidden sm:block text-[0.7rem] leading-snug ${corTexto} line-clamp-3">${esc(textoEspacos)}</span>`;
+      }
+      if (nomesBloq) {
+        const corBloq = passado ? 'bg-slate-200 text-slate-500' : 'bg-amber-400 text-slate-900';
+        corpo += `<span class="self-start rounded-md ${corBloq} font-bold px-1.5 py-0.5 text-[0.65rem] sm:text-sm leading-tight">
+                   ⛔ ${esc(nomesBloq)}</span>`;
+      }
+    }
+    html += `<button type="button" class="${classes}" data-dia="${dataIso}" aria-label="${esc(rotulo)}">
+               <span class="font-extrabold text-base sm:text-lg">${d}</span>${corpo}
+             </button>`;
+  }
+  $('grade').innerHTML = html;
+}
+
+function mudarMes(delta) {
+  const cal = estado.cal;
+  const novo = somarMeses(estado.ano, estado.mes, delta);
+  const alvo = mesIso(novo.ano, novo.mes);
+  if (alvo < cal.limMin || alvo > cal.limMax) return;
+  estado.ano = novo.ano; estado.mes = novo.mes;
+  desenharMes();
+}
+
+$('grade').addEventListener('click', (ev) => {
+  const b = ev.target.closest('[data-dia]');
+  if (b) abrirPainel(b.dataset.dia, b);
+});
+$('btn-ant').addEventListener('click', () => mudarMes(-1));
+$('btn-prox').addEventListener('click', () => mudarMes(1));
+$('btn-hoje').addEventListener('click', () => { irParaHoje(); desenharMes(); });
+$('seletor-mes').addEventListener('change', (ev) => {
+  const v = ev.target.value;
+  const cal = estado.cal;
+  if (v && v >= cal.limMin && v <= cal.limMax) {
+    const [a, m] = v.split('-').map(Number);
+    estado.ano = a; estado.mes = m;
+    desenharMes();
+  } else {
+    ev.target.value = mesIso(estado.ano, estado.mes); // fora do período
+  }
+});
+
+/* =========================================================================
+   PAINEL LATERAL — detalhes do dia, AGRUPADOS POR ESPAÇO
+   ========================================================================= */
+let origemFoco = null;
+async function abrirPainel(dataIso, origem) {
+  origemFoco = origem || null;
+  $('painel-titulo').textContent = dataLonga(dataIso);
+  $('painel-conteudo').innerHTML = '<p class="text-lg text-marinho-800 font-semibold"><span class="spinner"></span> Carregando...</p>';
+  $('overlay').classList.remove('opacity-0', 'pointer-events-none');
+  $('painel').classList.remove('translate-x-full');
+  document.body.style.overflow = 'hidden';
+  $('btn-fechar').focus();
+
+  try {
+    const det = await rpcAuth('getDetalhesDia', dataIso);
+    let html = '';
+    if (det.bloqueio) {
+      html += `<div class="rounded-xl bg-red-50 border-2 border-red-700 p-4 mb-5">
+        <p class="text-red-800 font-extrabold text-xl">⛔ Dia bloqueado</p>
+        <p class="mt-2 text-lg"><b>Motivo:</b> ${esc(det.bloqueio.motivo)}</p>
+        <p class="mt-2 text-lg font-bold">Observação:</p>
+        <p class="text-lg whitespace-pre-wrap">${det.bloqueio.observacao ? esc(det.bloqueio.observacao) : '<i>Sem observações.</i>'}</p>
+      </div>`;
+    }
+    (det.bloqueiosTurno || []).forEach(b => {
+      html += `<div class="rounded-xl bg-amber-50 border-2 border-amber-500 p-4 mb-4">
+        <p class="text-amber-900 font-extrabold text-xl">⛔ Turno ${esc(b.turno)} bloqueado</p>
+        <p class="mt-2 text-lg"><b>Motivo:</b> ${esc(b.motivo)}</p>
+        ${b.observacao ? `<p class="mt-1 text-lg whitespace-pre-wrap"><b>Observação:</b> ${esc(b.observacao)}</p>` : ''}
+      </div>`;
+    });
+    if (det.reservas.length) {
+      const espacos = [...new Set(det.reservas.map(r => r.espaco))];
+      html += `<p class="text-xl font-extrabold text-marinho-800 mb-1">${plural(det.reservas.length, 'reserva', 'reservas')}</p>
+               <p class="text-base text-slate-700 mb-3">${plural(espacos.length, 'espaço ocupado', 'espaços ocupados')}</p>`;
+      espacos.forEach(espaco => {
+        html += `<h4 class="mt-4 mb-2 text-lg font-extrabold bg-marinho-50 text-marinho-800 rounded-lg px-3 py-1.5">${esc(espaco)}</h4>
+                 <ul class="space-y-2">`;
+        det.reservas.filter(r => r.espaco === espaco).forEach(r => {
+          const objetos = resumoObjetos(r);
+          html += `<li class="rounded-xl border-2 border-slate-200 p-3">
+            <p class="text-lg font-bold">${esc(r.turno)}</p>
+            <p class="text-base text-slate-700">Pastoral: <b>${esc(r.pastoral || '—')}</b></p>
+            ${objetos ? `<p class="text-base text-slate-700">Itens: <b>${esc(objetos)}</b></p>` : ''}
+            ${r.minha ? '<p class="mt-1 inline-block rounded-full bg-ouro-400 text-marinho-900 text-sm font-extrabold px-3 py-0.5">Sua reserva</p>' : ''}
+          </li>`;
+        });
+        html += '</ul>';
+      });
+    } else if (!det.bloqueio && !(det.bloqueiosTurno || []).length) {
+      html += '<p class="text-lg text-slate-700">Nenhuma reserva para este dia. 🙂</p>';
+    }
+    $('painel-conteudo').innerHTML = html;
+  } catch (e) {
+    console.error(e);
+    $('painel-conteudo').innerHTML = '<p class="text-red-700 text-lg font-semibold">Erro ao carregar os detalhes.</p>';
+  }
+}
+
+function fecharPainel() {
+  $('overlay').classList.add('opacity-0', 'pointer-events-none');
+  $('painel').classList.add('translate-x-full');
+  document.body.style.overflow = '';
+  if (origemFoco) origemFoco.focus();
+}
+$('btn-fechar').addEventListener('click', fecharPainel);
+$('overlay').addEventListener('click', fecharPainel);
+document.addEventListener('keydown', (ev) => {
+  if (ev.key === 'Escape' && !$('painel').classList.contains('translate-x-full')) fecharPainel();
+});
+
+/* =========================================================================
+   LOGO
+   ========================================================================= */
+async function carregarLogo() {
+  let url = '';
+  try {
+    url = await rpc('getLogo');
+  } catch (e) {
+    console.error('Erro ao buscar a logo:', e);
+    return;
+  }
+  if (!url) { console.warn('Nenhuma logo configurada (LOGO_FILE_ID / LOGO_URL vazios).'); return; }
+  ['logo-login', 'logo-topo'].forEach((id) => {
+    const alvo = $(id);
+    if (!alvo) return;
+    const img = document.createElement('img');
+    img.alt = 'Logo';
+    img.className = 'w-full h-full object-contain';
+    img.onload = () => { alvo.innerHTML = ''; alvo.appendChild(img); };
+    img.onerror = () => console.error('A imagem da logo não carregou. Confira LOGO_FILE_ID no Backend.gs e a API_URL nesta página.');
+    img.src = url;
+  });
+}
+
+/* =========================================================================
+   LOGIN
+   ========================================================================= */
+function mostrarLogin(mensagem) {
+  $('tela-login').classList.remove('hidden');
+  $('tela-login').classList.add('flex');
+  $('app').classList.add('hidden');
+  if (mensagem) msgLogin(mensagem, 'erro'); else esconderMsgLogin();
+  const email = $('login-email');
+  if (!email.value) { try { email.value = localStorage.getItem('reservas_email') || ''; } catch (e) {} }
+  (email.value ? $('login-pin') : email).focus();
+}
+
+function mostrarApp() {
+  $('tela-login').classList.add('hidden');
+  $('tela-login').classList.remove('flex');
+  $('app').classList.remove('hidden');
+  atualizarCabecalho();
+  mostrarAba('form');
+  iniciarFormulario();
+}
+
+function msgLogin(texto, tipo) {
+  const el = $('msg-login');
+  el.className = 'rounded-xl p-4 text-lg font-semibold ' + (tipo === 'ok'
+    ? 'bg-green-50 border-2 border-green-700 text-green-800'
+    : 'bg-red-50 border-2 border-red-700 text-red-800');
+  el.textContent = texto;
+  el.classList.remove('hidden');
+}
+function esconderMsgLogin() { $('msg-login').classList.add('hidden'); }
+
+$('ver-pin').addEventListener('change', (ev) => {
+  $('login-pin').type = ev.target.checked ? 'text' : 'password';
+});
+$('login-pin').addEventListener('input', (ev) => {
+  ev.target.value = ev.target.value.replace(/\D/g, '').slice(0, 6);
+});
+
+$('form-login').addEventListener('submit', async (ev) => {
+  ev.preventDefault();
+  esconderMsgLogin();
+  const email = $('login-email').value.trim().toLowerCase();
+  const pin = $('login-pin').value.trim();
+  if (!email || !pin) { msgLogin('Preencha o e-mail e o PIN.', 'erro'); return; }
+
+  const btn = $('btn-entrar');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Entrando...';
+  try {
+    const r = await rpc('fazerLogin', email, pin);
+    if (!r.ok) { msgLogin(r.mensagem, 'erro'); $('login-pin').value = ''; return; }
+    guardarUsuario(r.usuario || { email: r.email, rotulo: r.nome });
+    guardarToken(r.token, $('lembrar').checked);
+    try { localStorage.setItem('reservas_email', r.email); } catch (e) {}
+    $('login-pin').value = '';
+    mostrarApp();
+  } catch (e) {
+    console.error(e);
+    msgLogin('Falha de conexão. Verifique a internet e tente de novo.', 'erro');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Entrar';
+  }
+});
+
+$('btn-sair').addEventListener('click', () => {
+  const token = estado.token;
+  guardarToken('');
+  guardarUsuario(null); // não deixa nome/WhatsApp guardados num aparelho compartilhado
+  rpc('sair', token).catch(() => {});
+  location.reload();
+});
+
+/* =========================================================================
+   INICIALIZAÇÃO
+   ========================================================================= */
+(async function iniciar() {
+  document.title = 'Reservas de Espaços — ' + NOME_INSTITUICAO;
+  $('nome-paroquia-login').textContent = NOME_INSTITUICAO;
+  $('nome-paroquia-topo').textContent = NOME_INSTITUICAO;
+  carregarLogo();
+  estado.token = lerToken();
+  if (!estado.token) { mostrarLogin(); return; }
+  try {
+    estado.cfgPreCarregado = await rpc('getDadosIniciais', estado.token); // confere a sessão guardada
+    estado.usuario = estado.cfgPreCarregado.usuario || lerUsuario();
+    mostrarApp();
+  } catch (e) {
+    guardarToken('');
+    const m = String(e.message || '');
+    mostrarLogin(m.indexOf('SESSAO') !== -1 ? m.replace(/^SESSAO:\s*/, '') : '');
+  }
+})();
+</script>
+</body>
+</html>
