@@ -21,8 +21,8 @@ Feito com **Google Apps Script**, **Google Sheets** (como banco de dados) e uma 
 ## Segurança em resumo
 
 - A planilha continua **privada**: o script roda com a conta do administrador e o usuário nunca a abre.
-- Login por e-mail + PIN de 6 dígitos, sem exigir conta Google (funciona em celulares com várias contas conectadas).
-- Bloqueio do e-mail por 15 minutos após 4 PINs errados, com atraso artificial nas tentativas falhas.
+- Login por e-mail + PIN, sem exigir conta Google (funciona em celulares com várias contas conectadas).
+- Bloqueio do e-mail após 4 PINs errados, com atraso artificial nas tentativas falhas.
 - Sessões com token aleatório; só o **hash** do token fica guardado no servidor, e a sessão expira (60 dias por padrão).
 - O PIN nunca é enviado de volta ao navegador.
 - Toda entrada é validada no servidor, e a saída é escapada no navegador contra XSS.
